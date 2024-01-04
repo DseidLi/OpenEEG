@@ -2,6 +2,7 @@ import datetime
 import os
 
 import torch
+from tqdm import tqdm
 
 
 class TrainerV1:
@@ -31,6 +32,8 @@ class TrainerV1:
         best_loss = float('inf')
 
         for epoch in range(self.epochs):
+            progress_bar = tqdm(total=len(self.train_loader),
+                                desc=f'Epoch {epoch + 1}')
             for batch_idx, (data, target) in enumerate(self.train_loader):
                 data, target = data.to(self.device), target.to(self.device)
                 self.optimizer.zero_grad()
@@ -39,20 +42,18 @@ class TrainerV1:
                 loss.backward()
                 self.optimizer.step()
 
+                progress_bar.update(1)  # Update the progress bar here
+
                 if loss.item() < best_loss:
                     best_loss = loss.item()
-                    save_path_best = f'{self.save_path}/best.pt'
+                    save_path_best = os.path.join(self.save_path, 'best.pt')
                     os.makedirs(os.path.dirname(save_path_best), exist_ok=True)
                     torch.save(self.model.state_dict(), save_path_best)
 
                 if batch_idx % 10 == 0:
-                    print(
-                        f'Train Epoch: {epoch+1} [{batch_idx * len(data)}/'
-                        f'{len(self.train_loader.dataset)} '
-                        f'({100. * batch_idx / len(self.train_loader):.0f}%)]'
-                        f'\tLoss: {loss.item():.6f}')
+                    progress_bar.set_postfix(loss=loss.item())
 
-            save_path_last = f'{self.save_path}/last.pt'
+            progress_bar.close()  # Close bar at the end of the epoch
+            save_path_last = os.path.join(self.save_path, 'last.pt')
             os.makedirs(os.path.dirname(save_path_last), exist_ok=True)
             torch.save(self.model.state_dict(), save_path_last)
-            print(f'Epoch {epoch+1}, Loss: {loss.item()}')

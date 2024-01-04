@@ -4,13 +4,13 @@ import torch.optim as optim
 from sklearn.model_selection import train_test_split
 from torch.utils.data import DataLoader
 
-from openeeg.datasets.EEGMMIDB import EEGMMIDBDataset
+from openeeg.datasets.eegmmidb import EEGMMIDBDataset
 from openeeg.models.pytorch_models import CNN1DNet
 from openeeg.trainers import TrainerV1
 from openeeg.utils.device_utils import get_device
 
 # EEGMMIDB数据集使用示例
-root_dir = 'D:/OpenEEG/data/EEGMMIDB/'
+root_dir = './data/EEGMMIDB/'
 subject_list = ['%03d' % i for i in range(1, 110)]
 record_list = ['%02d' % i for i in range(1, 15)]
 channels32 = [
