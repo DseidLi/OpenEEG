@@ -13,7 +13,7 @@ from openeeg.trainers import TrainerV2
 from openeeg.utils.device_utils import get_device
 import os
 
-
+from tqdm import tqdm
 
 class GradientReversalFunction(Function):
     """Gradient Reversal Layer from: Unsupervised Domain Adaptation by
@@ -50,9 +50,9 @@ class Discriminator(nn.Module):
         super(Discriminator, self).__init__()
         self.layer = nn.Sequential(
             GradientReversal(),
-            nn.Linear(64001, 50),  # Adjust the input dimensions as needed
+            nn.Linear(64001, 100),  # Adjust the input dimensions as needed
             nn.ReLU(),
-            nn.Linear(50, 20),
+            nn.Linear(100, 20),
             nn.ReLU(),
             nn.Linear(20, 1)
         )
@@ -61,45 +61,64 @@ class Discriminator(nn.Module):
         return self.layer(x)
 
 
-def train(model, discriminator, source_loader, target_loader, optimizer,
+def train(model, discriminator, source_loader, target_loader, optimizer, 
           epochs, device):
     for epoch in range(epochs):
-        total_loss, total_domain_loss, total_label_accuracy = 0, 0, 0
+        progress_bar = tqdm(total=len(source_loader), 
+                            desc=f'Epoch {epoch + 1}')
+        for ((source_data, source_task, source_labels),
+             (target_data, target_task, _)) in zip(source_loader, 
+                                                   target_loader):
 
-        for (source_data, source_labels), (target_data, _) in \
-                zip(source_loader, target_loader):
-            # Prepare data
-            source_data, source_labels = (source_data.to(device), 
-                                          source_labels.to(device))
-            target_data = target_data.to(device)
-            domain_labels = torch.cat([torch.ones(len(source_data)), 
-                                       torch.zeros(len(target_data))], 
-                                      dim=0).to(device)
+            source_data, source_task, source_labels = (
+                source_data.to(device), source_task.to(device), 
+                source_labels.to(device))
+            target_data, target_task = (
+                target_data.to(device), target_task.to(device))
 
-            # Forward pass
+            # 提取特征并单独处理
             source_features = model.feature_extractor(source_data)
             target_features = model.feature_extractor(target_data)
-            features = torch.cat([source_features, target_features], dim=0)
-            domain_preds = discriminator(features).squeeze()
-            label_preds = model.classfier(source_features)
 
-            # Calculate losses
-            domain_loss = F.binary_cross_entropy_with_logits(domain_preds, 
-                                                             domain_labels)
+            # 后处理步骤
+            source_features = torch.flatten(source_features, start_dim=1)
+            source_features = torch.cat([source_features, source_task.unsqueeze(1)], dim=1)
+            target_features = torch.flatten(target_features, start_dim=1)
+            target_features = torch.cat([target_features, target_task.unsqueeze(1)], dim=1)
+
+            # 单独通过判别器处理
+            source_domain_preds = discriminator(source_features).squeeze()
+            target_domain_preds = discriminator(target_features).squeeze()
+
+            # 合并源和目标的域预测结果
+            domain_preds = torch.cat(
+                [source_domain_preds, target_domain_preds], dim=0)
+
+            # 合并源和目标的域标签
+            domain_labels = torch.cat(
+                [torch.ones(len(source_data)), 
+                 torch.zeros(len(target_data))], dim=0).to(device)
+
+            # 分类器处理源特征
+            label_preds = model.classifier(source_features)
+
+            # 计算损失
+            domain_loss = F.binary_cross_entropy_with_logits(
+                domain_preds, domain_labels)
             label_loss = F.cross_entropy(label_preds, source_labels)
             total_loss = domain_loss + label_loss
 
-            # Backward and optimize
             optimizer.zero_grad()
             total_loss.backward()
             optimizer.step()
 
-            # Log metrics
-            total_domain_loss += domain_loss.item()
-            total_label_accuracy += (label_preds.max(1)[1] == source_labels).float().mean().item()
+            progress_bar.update(1)
+            progress_bar.set_postfix(
+                domain_loss=domain_loss.item(), 
+                label_loss=label_loss.item())
 
-        # Log epoch results
-        print(f'Epoch {epoch+1}: Domain Loss: {total_domain_loss/len(source_loader)}, Label Accuracy: {total_label_accuracy/len(source_loader)}')
+        progress_bar.close()
+
 
 
 def main():
@@ -114,15 +133,18 @@ def main():
     # M3CV数据集使用示例
     root_dir = r'./data/M3CV'
     
-    pretrained_model = CNN1DNetV2_RevGrad(num_classes=95, num_channels=64)
-    pretrained_model.load_state_dict(torch.load('path_to_pretrained_model.pt'))
+    device, device_message = get_device()
+    print(device_message)
 
+    pretrained_model = CNN1DNetV2_RevGrad(num_classes=95, num_channels=64)
+    pretrained_model.load_state_dict(torch.load('outputs/20240105_142449/best_test.pt'))
+    
     source_dataset = M3CVDataset(root_dir=root_dir,
                                  dataset_type='Enrollment')
     target_dataset = M3CVDataset(root_dir=root_dir,
-                                 dataset_type='Calibratioon')
-    device, device_message = get_device()
-    print(device_message)
+                                 dataset_type='Calibration')
+
+    pretrained_model = pretrained_model.to(device)
 
     # 分割数据集为训练集和测试集
     def split_dataset(dataset, test_size=0.1, random_state=42):
@@ -141,14 +163,12 @@ def main():
 
     # Example usage
     discriminator = Discriminator().to(device)
-    optim = torch.optim.Adam(list(discriminator.parameters()) + list(pretrained_model.parameters()), lr=0.001)
+    optim = torch.optim.Adam(list(discriminator.parameters()) +
+                             list(pretrained_model.parameters()), lr=0.001)
     train(pretrained_model, discriminator, source_loader, target_loader, optim,
           epochs=10, device=device)
 
 
-
-
-        
 
 if __name__ == "__main__":
     main()

@@ -20,11 +20,17 @@ class M3CVDataset(Dataset):
         """
         info_file = os.path.join(root_dir, f'{dataset_type}_Info.csv')
         df = pd.read_csv(info_file)
-        df = shuffle(df, random_state=0)
 
+        # 检查并适应不同的数据集格式
+        if 'SubjectID' in df.columns:
+            subject_col = 'SubjectID'
+        else:
+            subject_col = 'subject'
+
+        df = shuffle(df, random_state=0)
         self.img_list = df['EpochID'].values
         self.labels = [
-            int(s.replace('sub', '')) - 1 for s in df['subject'].values
+            int(s.replace('sub', '')) - 1 for s in df[subject_col].values
         ]
         self.root_dir = root_dir
         self.dataset_type = dataset_type

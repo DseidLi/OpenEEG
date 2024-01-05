@@ -1,5 +1,5 @@
 data/
-outputs/
+# outputs/
 .vscode/
 temp/
 __pycache__/

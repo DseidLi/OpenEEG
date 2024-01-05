@@ -11,12 +11,13 @@ from openeeg.trainers import TrainerV2
 from openeeg.utils.device_utils import get_device
 import os
 
+
 def main():
-    
+
     # 创建命令行参数解析器
     parser = argparse.ArgumentParser(
         description='Train a model on M3CV dataset.')
-    parser.add_argument('-r', '--resume', 
+    parser.add_argument('-r', '--resume',
                         type=str, 
                         help='Path to the saved model to resume training.')
 
