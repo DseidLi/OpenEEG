@@ -24,7 +24,7 @@ class M3CVDataset(Dataset):
 
         self.img_list = df['EpochID'].values
         self.labels = [
-            int(s.replace('sub', '')) - 1 for s in df['SubjectID'].values
+            int(s.replace('sub', '')) - 1 for s in df['subject'].values
         ]
         self.root_dir = root_dir
         self.dataset_type = dataset_type
