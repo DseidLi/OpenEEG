@@ -5,6 +5,7 @@ exclude: |
       .vscode/.*
       temp/.*
       outputs/.*
+      references/.*
     )
 
 repos:
@@ -12,17 +13,17 @@ repos:
     rev: 5.0.4
     hooks:
       - id: flake8
-        exclude: configs/
+
   - repo: https://github.com/PyCQA/isort
     rev: 5.11.5
     hooks:
       - id: isort
-        exclude: configs/
+
   - repo: https://github.com/pre-commit/mirrors-yapf
     rev: v0.32.0
     hooks:
       - id: yapf
-        exclude: configs/
+
   - repo: https://github.com/codespell-project/codespell
     rev: v2.2.1
     hooks:
@@ -53,7 +54,7 @@ repos:
             )
       - id: requirements-txt-fixer
       - id: double-quote-string-fixer
-        exclude: configs/
+
       - id: check-merge-conflict
       - id: fix-encoding-pragma
         args: ["--remove"]
@@ -70,7 +71,7 @@ repos:
           - mdformat-openmmlab
           - mdformat_frontmatter
           - linkify-it-py
-        exclude: configs/
+
   - repo: https://github.com/myint/docformatter
     rev: v1.3.1
     hooks:

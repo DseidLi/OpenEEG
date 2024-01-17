@@ -1,0 +1,5 @@
+kaggle
+pandas
+psutil
+scikit-learn
+tqdm

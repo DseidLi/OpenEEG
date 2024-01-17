@@ -1,13 +1,14 @@
-import torch
 import time
+
+import torch
 
 # 检查是否有可用的 GPU
 if torch.cuda.is_available():
-    device = torch.device("cuda")
-    print(f"有可用的 GPU：{torch.cuda.get_device_name(0)}")
+    device = torch.device('cuda')
+    print(f'有可用的 GPU：{torch.cuda.get_device_name(0)}')
 else:
-    device = torch.device("cpu")
-    print("没有可用的 GPU，使用 CPU。")
+    device = torch.device('cpu')
+    print('没有可用的 GPU，使用 CPU。')
 
 # 创建一个随机张量并将其移动到选定的设备上
 size = 1000
@@ -24,4 +25,4 @@ c = torch.matmul(a, b)
 end_time = time.time()
 
 # 输出运算时间
-print(f"运算耗时：{end_time - start_time} 秒")
+print(f'运算耗时：{end_time - start_time} 秒')

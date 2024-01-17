@@ -1,7 +1,7 @@
 import tensorflow as tf
 
-print("TensorFlow version:", tf.__version__)
-print("Is GPU available? ", tf.test.is_gpu_available())
+print('TensorFlow version:', tf.__version__)
+print('Is GPU available? ', tf.test.is_gpu_available())
 
 gpus = tf.config.experimental.list_physical_devices('GPU')
 if gpus:

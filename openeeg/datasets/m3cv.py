@@ -1,10 +1,8 @@
 import os
 
-import numpy as np
 import pandas as pd
 import scipy.io as sio
 import torch
-from sklearn.utils import shuffle
 from torch.utils.data import Dataset
 
 
@@ -27,11 +25,21 @@ class M3CVDataset(Dataset):
         else:
             subject_col = 'subject'
 
-        df = shuffle(df, random_state=0)
-        self.img_list = df['EpochID'].values
-        self.labels = [
-            int(s.replace('sub', '')) - 1 for s in df[subject_col].values
-        ]
+        # 检查并适应不同的数据集格式
+        if 'EpochID' in df.columns:
+            epoch_col = 'EpochID'
+        else:
+            epoch_col = 'Row'
+
+        # 检查并适应不同的数据集格式
+        if 'Task' in df.columns:
+            task_col = 'Task'
+        else:
+            task_col = 'condition'
+
+        self.img_list = df[epoch_col].values
+        self.task_list = df[task_col].values
+        self.labels = [self.extract_label(s) for s in df[subject_col].values]
         self.root_dir = root_dir
         self.dataset_type = dataset_type
 
@@ -44,7 +52,18 @@ class M3CVDataset(Dataset):
                                 file_name + '.mat')
         data = sio.loadmat(mat_path)['epoch_data']
         eeg_data = data[:64, :]
-        task_type = np.unique(data[64, :])[0]
+        # task_type = np.unique(data[64, :])[0]
+        task_type = self.task_list[idx]
         label = self.labels[idx]
 
         return eeg_data, task_type, torch.tensor(label, dtype=torch.long)
+
+    @staticmethod
+    def extract_label(s):
+        try:
+            # 尝试提取标签，只有当 s 是字符串类型时
+            return int(s.replace('sub', '')) - 1 \
+                if isinstance(s, str) else -1
+        except ValueError:
+            # 处理任何转换中的异常
+            return -1
